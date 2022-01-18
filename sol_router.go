@@ -35,44 +35,44 @@ func (sol *SolRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handler(w, r, sol)
 }
 
-func (sol *SolRouter) SetupGET(endpoint string, handler func(w http.ResponseWriter, r *http.Request, s *SolRouter)) {
+func (sol *SolRouter) SetGET(endpoint string, handler func(w http.ResponseWriter, r *http.Request, s *SolRouter)) {
 	err := sol.setPath(endpoint, "GET", handler)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
 }
 
-func (sol *SolRouter) SetupPOST(endpoint string, handler func(w http.ResponseWriter, r *http.Request, s *SolRouter)) {
+func (sol *SolRouter) GetPOST(endpoint string, handler func(w http.ResponseWriter, r *http.Request, s *SolRouter)) {
 	err := sol.setPath(endpoint, "POST", handler)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
 }
 
-func (sol *SolRouter) SetupPUT(endpoint string, handler func(w http.ResponseWriter, r *http.Request, s *SolRouter)) {
+func (sol *SolRouter) GetPUT(endpoint string, handler func(w http.ResponseWriter, r *http.Request, s *SolRouter)) {
 	err := sol.setPath(endpoint, "PUT", handler)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
 }
 
-func (sol *SolRouter) SetupDELETE(endpoint string, handler func(w http.ResponseWriter, r *http.Request, s *SolRouter)) {
+func (sol *SolRouter) GetDELETE(endpoint string, handler func(w http.ResponseWriter, r *http.Request, s *SolRouter)) {
 	err := sol.setPath(endpoint, "DELETE", handler)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
 }
 
-func (sol *SolRouter) GetParam(name string, r *http.Request) string {
+func (sol *SolRouter) Param(name string, r *http.Request) string {
 	if sol.tree == nil || sol.tree.Root == nil || sol.tree.Root.Children == nil || sol.tree.Root.Children[r.Method] == nil {
 		return ""
 	}
 	currentNode := sol.tree.Root.Children[r.Method]
 	sections := strings.Split(r.URL.Path, "/")
-	return getParamHelper(sections[1:], name, currentNode)
+	return paramHelper(sections[1:], name, currentNode)
 }
 
-func getParamHelper(sections []string, name string, node *TreeNode) string {
+func paramHelper(sections []string, name string, node *TreeNode) string {
 	if node == nil {
 		return ""
 	} else if node.Params != nil && node.Params.names != nil && len(node.Params.names) > 0 {
@@ -87,7 +87,7 @@ func getParamHelper(sections []string, name string, node *TreeNode) string {
 	if len(sections) == 0 {
 		return ""
 	}
-	next, _ := getNextNode(node, sections[0])
+	next, _ := nextNode(node, sections[0])
 	if next == nil {
 		return ""
 	}
@@ -96,7 +96,7 @@ func getParamHelper(sections []string, name string, node *TreeNode) string {
 	} else {
 		sections = sections[1:]
 	}
-	return getParamHelper(sections, name, next)
+	return paramHelper(sections, name, next)
 }
 
 func (sol *SolRouter) setPath(endpoint, httpMethod string, handler func(w http.ResponseWriter, r *http.Request, s *SolRouter)) error {
@@ -195,7 +195,7 @@ func (sol *SolRouter) matchPathHelper(pathSections []string, currentNode *TreeNo
 		return nil
 	}
 
-	nextNode, key := getNextNode(currentNode, pathSections[0])
+	nextNode, key := nextNode(currentNode, pathSections[0])
 	if nextNode == nil {
 		return nil
 	}
@@ -208,15 +208,14 @@ func (sol *SolRouter) matchPathHelper(pathSections []string, currentNode *TreeNo
 	return sol.matchPathHelper(pathSections[1:], nextNode)
 }
 
-func getNextNode(node *TreeNode, s string) (child *TreeNode, key string) {
+func nextNode(node *TreeNode, s string) (child *TreeNode, key string) {
 	if node == nil || node.Children == nil {
 		return nil, ""
 	}
-	child = node.Children[s]
-	if child != nil {
-		return child, s
+	c, ok := node.Children[s]
+	if ok {
+		return c, s
 	}
-	key = ""
 	for k, cur := range node.Children {
 		if cur == nil || cur.Params == nil || len(cur.Params.names) == 0{
 			continue
